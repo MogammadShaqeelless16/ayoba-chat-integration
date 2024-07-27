@@ -30,7 +30,6 @@ Thumbs.db
 .idea/
 
 # React
-public/
 *.cache/
 *.pnp.*
 .pnp/
