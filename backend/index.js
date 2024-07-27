@@ -16,13 +16,10 @@ const getAccessToken = async () => {
   }
 };
 
-// Function to send message
-const sendMessage = async (accessToken, message, msisdns) => {
+// Function to fetch message
+const fetchMessage = async (accessToken) => {
   try {
-    const response = await axios.post('https://api.chenosis.io/ayoba/com/v1/business/message', {
-      message: message,
-      msisdns: msisdns
-    }, {
+    const response = await axios.get('https://api.chenosis.io/ayoba/com/v1/business/message', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
@@ -30,28 +27,27 @@ const sendMessage = async (accessToken, message, msisdns) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error sending message:', error.response?.data || error.message);
+    console.error('Error fetching message:', error.response?.data || error.message);
     throw error;
   }
 };
 
-// Main function to get token and send message
+// Main function to get token and fetch message
 const main = async () => {
   try {
     const accessToken = await getAccessToken();
     console.log('Access Token:', accessToken); // Debugging line to verify access token
-    const message = {
-      type: 'text',
-      text: 'Hello second message!'
-    };
-    const msisdns = [
-      '+27682237174'
-    ];
-    const result = await sendMessage(accessToken, message, msisdns);
-    console.log('Message sent successfully:', result);
-  } catch (error) {
-    console.error('Failed to send message:', error);
+    const result = await fetchMessage(accessToken);
+    console.log('Fetched message successfully:', result);
+  // Assuming the result contains a 'text' field
+  if (result && result.message && result.message.text) {
+    console.log('Message Text:', result.message.text);
+  } else {
+    console.log('No text found in the fetched message.');
   }
+} catch (error) {
+  console.error('Failed to fetch message:', error);
+}
 };
 
 main();
