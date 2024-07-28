@@ -82,6 +82,9 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
+        .register-container {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -89,22 +92,32 @@
         <h2>Login</h2>
         <input type="text" id="username" placeholder="Username" />
         <input type="password" id="password" placeholder="Password" />
-        <button onclick="login()">Login</button>
+        <div style="display: flex; justify-content: space-between;">
+            <button onclick="login()">Login</button>
+            <button onclick="toggleRegister()">Register</button>
+        </div>
+        <div class="register-container" id="register-container">
+            <h2>Register</h2>
+            <input type="text" id="register-msisdn" placeholder="MSISDN" />
+            <input type="text" id="register-deliveryType" placeholder="Delivery Type" />
+            <input type="text" id="register-webhookUrl" placeholder="Webhook URL" />
+            <button onclick="register()">Submit</button>
+        </div>
     </div>
     <div class="container" id="chat-container" style="display: none;">
         <div class="sidebar" id="account-container">
             <h2>Account Details</h2>
             <div>
                 <label for="accountName">Name:</label>
-                <input type="text" id="accountName" placeholder="Account Name" />
+                <input type="text" id="accountName" placeholder="Account Name" value="Crechespots" />
             </div>
             <div>
                 <label for="accountEmail">Email:</label>
-                <input type="email" id="accountEmail" placeholder="Account Email" />
+                <input type="email" id="accountEmail" placeholder="Account Email" value="Crechespots@gmail.com" />
             </div>
             <div>
                 <label for="accountPhone">Phone:</label>
-                <input type="text" id="accountPhone" placeholder="Account Phone" />
+                <input type="text" id="accountPhone" placeholder="Account Phone" value="0813746844" />
             </div>
             <button onclick="updateAccountDetails()">Update Details</button>
             <button onclick="fetchAccountDetails()">Refresh Details</button>
@@ -118,6 +131,15 @@
     </div>
     <script>
         let token = null;
+
+        function toggleRegister() {
+            const registerContainer = document.getElementById('register-container');
+            if (registerContainer.style.display === 'none' || registerContainer.style.display === '') {
+                registerContainer.style.display = 'block';
+            } else {
+                registerContainer.style.display = 'none';
+            }
+        }
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -140,6 +162,32 @@
             } catch (error) {
                 console.error('Error during login:', error.message);
                 alert('Error during login: ' + error.message);
+            }
+        }
+
+        async function register() {
+            const msisdn = document.getElementById('register-msisdn').value;
+            const deliveryType = document.getElementById('register-deliveryType').value;
+            const webhookUrl = document.getElementById('register-webhookUrl').value;
+
+            try {
+                const response = await fetch('/v1/business/self/register', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ msisdn, deliveryType, webhookUrl })
+                });
+                if (response.ok) {
+                    alert('Registration successful');
+                    toggleRegister();
+                } else {
+                    alert('Registration failed');
+                }
+            } catch (error) {
+                console.error('Error during registration:', error.message);
+                alert('Error during registration: ' + error.message);
             }
         }
 
@@ -201,9 +249,7 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const accountDetails = await response.json();
-                document.getElementById('accountName').value = accountDetails.name;
-                document.getElementById('accountEmail').value = accountDetails.email;
-                document.getElementById('accountPhone').value = accountDetails.phone;
+  
             } catch (error) {
                 console.error('Error fetching account details:', error.message);
                 alert('Error fetching account details: ' + error.message);
