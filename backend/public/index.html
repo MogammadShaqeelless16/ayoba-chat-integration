@@ -85,6 +85,25 @@
         .register-container {
             display: none;
         }
+
+        .profile-picture-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #profile-picture {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+
+        #profile-picture-upload {
+            display: block;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +126,10 @@
     <div class="container" id="chat-container" style="display: none;">
         <div class="sidebar" id="account-container">
             <h2>Account Details</h2>
+            <div class="profile-picture-container">
+                <img id="profile-picture" src="https://crechespots.onrender.com/logo.png" alt="Profile Picture" onclick="triggerFileUpload()" />
+                <input type="file" id="profile-picture-upload" accept="image/*" style="display: none;" onchange="uploadProfilePicture()" />
+            </div>
             <div>
                 <label for="accountName">Name:</label>
                 <input type="text" id="accountName" placeholder="Account Name" value="Crechespots" />
@@ -284,6 +307,20 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('chat-container').style.display = 'none';
         });
+
+        function uploadProfilePicture() {
+        const fileInput = document.getElementById('profile-picture-upload');
+        const profilePicture = document.getElementById('profile-picture');
+
+        if (fileInput.files && fileInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profilePicture.src = e.target.result;
+            }
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+    }
+
     </script>
 </body>
 </html>
