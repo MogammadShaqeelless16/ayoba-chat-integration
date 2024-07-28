@@ -9,133 +9,121 @@ const port = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Function to get access token
-const getAccessToken = async () => {
+let token = null;
+
+// Function to login and get a token
+const login = async (username, password) => {
   try {
-    const response = await axios.post('https://api.chenosis.io/oauth/client/accesstoken?grant_type=client_credentials', null, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from('0FBtMSztZbAZqKSGsgzidDu6uFSZimgS:Q6GEGcqGXCmMpD7x').toString('base64')}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    });
-    console.log('Access token response:', response.data); // Log token response
-    return response.data.access_token;
+    const response = await axios.post(
+      "https://api.ayoba.me/v2/login",
+      { username, password },
+      { headers: { "Content-Type": "application/json" } }
+    );
+    token = response.data.access_token;
+    console.log('Login successful:', token);
+    return token;
   } catch (error) {
-    console.error('Error getting access token:', error.response?.data || error.message);
-    throw new Error('Failed to get access token');
+    console.error('Error during login:', error.response?.data || error.message);
+    throw new Error('Failed to login');
   }
 };
 
-// Function to send message
-const sendMessage = async (accessToken, message, msisdns) => {
+// Login route
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
   try {
-    const response = await axios.post('https://api.chenosis.io/ayoba/com/v1/business/message', {
-      message: message,
-      msisdns: msisdns
-    }, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    console.log('Send message response:', response.data); // Log message response
-    return response.data;
-  } catch (error) {
-    console.error('Error sending message:', error.response?.data || error.message);
-    throw new Error('Failed to send message');
-  }
-};
-
-// Function to fetch messages
-const fetchMessages = async (accessToken) => {
-  try {
-    const response = await axios.get('https://api.chenosis.io/ayoba/com/v1/business/messages', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-    console.log('Fetch messages response:', response.data); // Log fetch messages response
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching messages:', error.response?.data || error.message);
-    throw new Error('Failed to fetch messages');
-  }
-};
-
-// Function to fetch account details
-const fetchAccountDetails = async (accessToken) => {
-  try {
-    const response = await axios.get('https://api.chenosis.io/ayoba/com/v1/business/account', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-    console.log('Fetch account details response:', response.data); // Log account details response
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching account details:', error.response?.data || error.message);
-    throw new Error('Failed to fetch account details');
-  }
-};
-
-// Function to update account details
-const updateAccountDetails = async (accessToken, details) => {
-  try {
-    const response = await axios.put('https://api.chenosis.io/ayoba/com/v1/business/account', details, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    console.log('Update account details response:', response.data); // Log update account details response
-    return response.data;
-  } catch (error) {
-    console.error('Error updating account details:', error.response?.data || error.message);
-    throw new Error('Failed to update account details');
-  }
-};
-
-// Route to handle sending messages
-app.post('/send-message', async (req, res) => {
-  try {
-    const accessToken = await getAccessToken();
-    const { message, msisdns } = req.body;
-    const result = await sendMessage(accessToken, message, msisdns);
-    res.json(result);
+    const token = await login(username, password);
+    res.json({ token });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Route to handle fetching messages
-app.get('/messages', async (req, res) => {
+// Middleware to check token
+const checkToken = (req, res, next) => {
+  if (!token) {
+    return res.redirect('/');
+  }
+  next();
+};
+
+// Route to handle sending messages
+app.post('/send-message', checkToken, async (req, res) => {
+  const { message, msisdns } = req.body;
   try {
-    const accessToken = await getAccessToken();
-    const messages = await fetchMessages(accessToken);
-    res.json(messages);
+    const payload = {
+      msisdns,
+      message: {
+        type: 'text', // Assuming 'text' type message
+        text: message // Ensure message object has the correct structure
+      }
+    };
+    const response = await axios.post(
+      "https://api.ayoba.me/v1/business/message",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error sending message:', error.response?.data || error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route to handle fetching messages
+app.get('/messages', checkToken, async (req, res) => {
+  try {
+    const response = await axios.get(
+      "https://api.ayoba.me/v1/business/message",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    res.json(response.data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Route to handle fetching account details
-app.get('/account-details', async (req, res) => {
+app.get('/account-details', checkToken, async (req, res) => {
   try {
-    const accessToken = await getAccessToken();
-    const accountDetails = await fetchAccountDetails(accessToken);
-    res.json(accountDetails);
+    const response = await axios.get(
+      "https://api.ayoba.me/v1/business/account",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    res.json(response.data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Route to handle updating account details
-app.put('/account-details', async (req, res) => {
+app.put('/account-details', checkToken, async (req, res) => {
+  const details = req.body;
   try {
-    const accessToken = await getAccessToken();
-    const details = req.body;
-    const result = await updateAccountDetails(accessToken, details);
-    res.json(result);
+    const response = await axios.put(
+      "https://api.ayoba.me/v1/business/account",
+      details,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    res.json(response.data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
